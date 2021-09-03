@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# Fail fast
+set -euo pipefail
+
+BUILD_DIR=$1
+
+latest_tag() {
+    curl -s "https://api.github.com/repos/$1/releases/latest" |
+    grep '"tag_name":' |
+    sed -E 's/.*"v([^"]+)".*/\1/'
+}
+
+get_download_url() {
+    repo='q3aql/aria2-static-builds'
+    tag=$(latest_tag $repo)
+    echo "https://github.com/$repo/releases/download/v$tag/aria2-$tag-linux-gnu-64bit-build1.tar.bz2"
+}
+
+disp() {
+  echo "-----> $*"
+}
+
+indent() {
+  sed -u 's/^/       /'
+}
+
+echo 'Installing: Aria2c' | indent
+mkdir -p vendor && cd vendor
+mkdir -p aria2c && cd aria2c
+download_url=$(get_download_url)
+disp "Downloading $(basename $download_url)..."
+curl -sL $download_url | tar -jx --strip-components=1
+echo "Exporting PATH:" | indent
+PROFILE_PATH="$BUILD_DIR/.profile.d/aria2c.sh"
+mkdir -p $(dirname $PROFILE_PATH)
+echo 'export PATH="$PATH:${HOME}/vendor/aria2c"' >> $PROFILE_PATH
